@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("ipcRenderer, electronAPI", {
+electron.contextBridge.exposeInMainWorld("electronAPI", {
   on(...args) {
     const [channel, listener] = args;
     return electron.ipcRenderer.on(channel, (event, ...args2) => listener(event, ...args2));

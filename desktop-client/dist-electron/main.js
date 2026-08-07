@@ -1,7 +1,9 @@
-import { ipcMain, desktopCapturer, app, BrowserWindow } from "electron";
+import { app, ipcMain, desktopCapturer, BrowserWindow } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+app.commandLine.appendSwitch("use-fake-device-for-media-stream");
+app.commandLine.appendSwitch("use-fake-ui-for-media-stream");
 createRequire(import.meta.url);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
@@ -12,9 +14,14 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win;
 function createWindow() {
   win = new BrowserWindow({
+    width: 1e3,
+    height: 750,
+    title: "NexusRTC Collaboration Suite",
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs")
+      preload: path.join(__dirname$1, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false
     }
   });
   win.webContents.on("did-finish-load", () => {
@@ -27,15 +34,21 @@ function createWindow() {
   }
 }
 ipcMain.handle("get-screen-sources", async () => {
-  const sources = await desktopCapturer.getSources({
-    types: ["window", "screen"],
-    thumbnailSize: { width: 300, height: 200 }
-  });
-  return sources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    thumbnail: source.thumbnail.toDataURL()
-  }));
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ["window", "screen"],
+      thumbnailSize: { width: 300, height: 200 },
+      fetchWindowIcons: true
+    });
+    return sources.filter((source) => source.name.trim() !== "" && !source.name.includes("MSCTFIME UI")).map((source) => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL()
+    }));
+  } catch (error) {
+    console.error("Failed to capture screen sources:", error);
+    return [];
+  }
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -48,6 +61,7 @@ app.on("activate", () => {
     createWindow();
   }
 });
+app.commandLine.appendSwitch("disable-features", "WebRtcAllowWgcWindowCapturer");
 app.whenReady().then(createWindow);
 export {
   MAIN_DIST,
