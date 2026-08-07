@@ -8,6 +8,8 @@ const RTC_CONFIG: RTCConfiguration = {
 export const useWebRTC = () => {
   const [status, setStatus] = useState<string>('Disconnected');
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+  const [isVideoOff, setIsVideoOff] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -180,5 +182,26 @@ export const useWebRTC = () => {
     }
   };
 
-  return { localVideoRef, remoteVideoRef, status, isConnected, joinRoom, startScreenShare };
+  const toggleAudio = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsAudioMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  // Toggle Camera (Video On / Off)
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
+    }
+  };
+
+  return { localVideoRef, remoteVideoRef, status, isConnected, isAudioMuted, isVideoOff, joinRoom, startScreenShare, toggleAudio, toggleVideo };
 };
